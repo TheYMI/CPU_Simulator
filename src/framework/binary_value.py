@@ -95,7 +95,7 @@ class BinaryValue:
                 raise ValueError("negative numbers cannot be converted to binary values")
 
             return cls._int_to_bin(value)
-        except (AttributeError, TypeError):
+        except AttributeError:
             if type(value) is int:
                 return cls._int_to_bin(value)
             raise ValueError("illegal decimal value: '" + str(value) + "'")
@@ -184,8 +184,7 @@ class BinaryValue:
         augend = format_str.format(augend)[::-1]
         addend = format_str.format(addend)[::-1]
 
-        result = ""
-        carry = "0"
+        result, carry = "", "0"
         for i in range(length):
             sum_, carry = cls._add[augend[i], addend[i], carry]
             result = sum_ + result
@@ -211,7 +210,9 @@ class BinaryValue:
         subtrahend = cls.invert("0b" + subtrahend)
         subtrahend = cls.add("0b" + subtrahend, 1)
 
-        return cls.add("0b" + minuend, "0b" + subtrahend)[-length:]
+        result = cls.add("0b" + minuend, "0b" + subtrahend)[-length:]
+        result = result.lstrip("0")
+        return result if result else "0"
 
     @classmethod
     def mul(cls, multiplicand, multiplier):
@@ -231,6 +232,9 @@ class BinaryValue:
     @classmethod
     def _floor_division(cls, numerator, denominator):
         """ Divides the numerator by the denominator and return both the quotient and the remainder """
+
+        if BinaryValue.equal(denominator, 0):
+            raise ZeroDivisionError
 
         remainder, denominator = cls.bin(numerator), cls.bin(denominator)
 
@@ -276,43 +280,43 @@ class BinaryValue:
         return "".join([cls._inv[digit] for digit in value])
 
     @classmethod
-    def _normalize_bitwise_values(cls, value_1, value_2):
+    def _normalize_bitwise_values(cls, value1, value2):
         """ Gets both values as binary values with the same length """
 
-        value_1, value_2 = cls.bin(value_1, strip_zeros=False), cls.bin(value_2, strip_zeros=False)
-        length = max(len(value_1), len(value_2))
+        value1, value2 = cls.bin(value1, strip_zeros=False), cls.bin(value2, strip_zeros=False)
+        length = max(len(value1), len(value2))
 
         # Add leading zeroes so both numbers match in length
         format_str = "{:0>" + str(length) + "}"
-        value_1 = format_str.format(value_1)
-        value_2 = format_str.format(value_2)
+        value1 = format_str.format(value1)
+        value2 = format_str.format(value2)
 
-        return value_1, value_2
+        return value1, value2
 
     @classmethod
-    def bitwise_and(cls, value_1, value_2):
+    def bitwise_and(cls, value1, value2):
         """ Performs an 'and' operation on each respective bits of both values  """
 
-        value_1, value_2 = cls._normalize_bitwise_values(value_1, value_2)
-        result = "".join([cls._and[value_1[i], value_2[i]] for i in range(len(value_1))])
+        value1, value2 = cls._normalize_bitwise_values(value1, value2)
+        result = "".join([cls._and[value1[i], value2[i]] for i in range(len(value1))])
 
         return result
 
     @classmethod
-    def bitwise_or(cls, value_1, value_2):
+    def bitwise_or(cls, value1, value2):
         """ Performs an 'or' operation on each respective bits of both values  """
 
-        value_1, value_2 = cls._normalize_bitwise_values(value_1, value_2)
-        result = "".join([cls._or[value_1[i], value_2[i]] for i in range(len(value_1))])
+        value1, value2 = cls._normalize_bitwise_values(value1, value2)
+        result = "".join([cls._or[value1[i], value2[i]] for i in range(len(value1))])
 
         return result
 
     @classmethod
-    def bitwise_xor(cls, value_1, value_2):
+    def bitwise_xor(cls, value1, value2):
         """ Performs a 'xor' operation on each respective bits of both values  """
 
-        value_1, value_2 = cls._normalize_bitwise_values(value_1, value_2)
-        result = "".join([cls._xor[value_1[i], value_2[i]] for i in range(len(value_1))])
+        value1, value2 = cls._normalize_bitwise_values(value1, value2)
+        result = "".join([cls._xor[value1[i], value2[i]] for i in range(len(value1))])
 
         return result
 
@@ -330,8 +334,8 @@ class BinaryValue:
 
 
 class BitValue:
-    """ This class handles binary values, as represented by a set amount of bits, similar to how values are represented
-        in hardware """
+    """ This class wraps the BinaryValue, to handle binary values as represented by a set amount of bits, similar to how
+        values are represented in hardware """
 
     def __init__(self, value="0b0", bits=None):
         """ Initializes a an object with the binary representation of the value, as it fits in the given amount of bits.
