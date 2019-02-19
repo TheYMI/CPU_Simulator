@@ -5,7 +5,8 @@ import sys, os
 
 
 def main():
-    pytest.main(["-s", "-v", "--tb=short", "--show-capture=no"])
+    pytest_cmd = ["-s", "-v", "--tb=short", "--show-capture=no"]
+    pytest.main(pytest_cmd)
 
 
 if __name__ == "__main__":
