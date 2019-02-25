@@ -409,13 +409,12 @@ class BitValue:
     def bin(self):
         return "0b" + self.value
     __str__ = bin
-    __repr__ = bin
 
     def oct(self):
         # 3 binary digits = 1 octal digit
         # Adding 2 to the number of digits causes the floor division to behave like ceiling division (in case the number
         # of bits doesn't divide evenly by 3)
-        length = len(self.value.lstrip("0"))
+        length = len(self.value)
         oct_digits = (length + 2) // 3
         format_str = "{:>0" + str(oct_digits) + "o}"
 
@@ -428,7 +427,7 @@ class BitValue:
         # 4 binary digits = 1 hexadecimal digit
         # Adding 3 to the number of digits causes the floor division to behave like ceiling division (in case the number
         # of bits doesn't divide evenly by 4)
-        length = len(self.value.lstrip("0"))
+        length = len(self.value)
         hex_digits = (length + 3) // 4
         format_str = "{:>0" + str(hex_digits) + "x}"
 

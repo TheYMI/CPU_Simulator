@@ -117,8 +117,6 @@ class TestValueSetting:
 class TestSlicing:
     """ This class tests the behavior of slicing on a BitValue object """
 
-    slice_values = [(3, 10, "1011001"), (0, 8, "11001110"), (-8, -3, "00010")]
-
     def test_single_index(self):
         bv = BitValue("0x9B5F", 16)
 
@@ -157,7 +155,7 @@ class TestSlicing:
             error = "the slice at [{}:] is {}, not {}".format(i, bv.value[:-i], bv[i:])
             assert bv[i:] == bv.value[:-i], error
 
-    @pytest.mark.parametrize("start, end, expected", slice_values)
+    @pytest.mark.parametrize("start, end, expected", [(3, 10, "1011001"), (0, 8, "11001110"), (-8, -3, "00010")])
     def test_slice(self, start, end, expected):
         bv = BitValue("0x02468ACE", bits=32)
         assert bv[start:end] == expected, "the slice should have been '{}', not '{}'".format(expected, bv[start:end])
@@ -465,7 +463,7 @@ class TestConversions:
         bv = BitValue(value, 8)
         assert bv.bin() == expected, "{} != {}".format(bv.bin(), expected)
 
-    expected_oct = ["0o0", "0o5", "0o376"]
+    expected_oct = ["0o000", "0o005", "0o376"]
 
     @pytest.mark.parametrize("value, expected", zip(conversion_values, expected_oct))
     def test_oct_conversion(self, value, expected):
@@ -479,7 +477,7 @@ class TestConversions:
         bv = BitValue(value, 8)
         assert bv.dec() == expected, "{} != {}".format(bv.dec(), expected)
 
-    expected_hex = ["0x0", "0x5", "0xFE"]
+    expected_hex = ["0x00", "0x05", "0xFE"]
 
     @pytest.mark.parametrize("value, expected", zip(conversion_values, expected_hex))
     def test_hex_conversion(self, value, expected):
