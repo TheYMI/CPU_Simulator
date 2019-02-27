@@ -50,6 +50,20 @@ class DataComponent(Component):
     def __init__(self, component_id, component_name):
         super(DataComponent, self).__init__(component_id, component_name)
 
+    @property
+    @abc.abstractmethod
+    def content(self):
+        pass
+
+    @content.setter
+    @abc.abstractmethod
+    def content(self, value):
+        pass
+
+    @abc.abstractmethod
+    def __len__(self):
+        pass
+
     @abc.abstractmethod
     def up_tick(self):
         """ Performs actions when a cycle starts """

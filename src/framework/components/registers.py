@@ -8,6 +8,7 @@ Description: The registers module defines the classes for the different register
              1. General purpose register: holds a value
              2. Slice register: used to access a section within another, larger, register (has no value of its own)
              3. Flag register: used as a set of flags, where each bit represents the status of a different flag
+                               (implemented in the 'flags' module)
 """
 
 import abc
@@ -16,14 +17,14 @@ from src.framework.components.components import DataComponent
 from src.framework.bit_value import BitValue
 
 
-class DataRegister(DataComponent):
+class BaseDataRegister(DataComponent):
     """ This class is the base class for registers that hold a value. Each register has an input component, whose value
         is transferred to the register (if write is enabled). """
 
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, register_id, register_name):
-        super(DataRegister, self).__init__(register_id, register_name)
+        super(BaseDataRegister, self).__init__(register_id, register_name)
 
         self._write_enable = False
         self._input = None
@@ -42,20 +43,6 @@ class DataRegister(DataComponent):
     def input(self, input_component):
         self._validate_input_component(input_component)
         self._input = input_component
-
-    @property
-    @abc.abstractmethod
-    def content(self):
-        pass
-
-    @content.setter
-    @abc.abstractmethod
-    def content(self, value):
-        pass
-
-    @abc.abstractmethod
-    def __len__(self):
-        pass
 
     @abc.abstractmethod
     def __getitem__(self, item):
@@ -110,18 +97,22 @@ class DataRegister(DataComponent):
 
     def up_tick(self):
         """ Updates the buffer during the "up" tick, before the input changes during the "down" tick """
+        if self._input is None:
+            return
+
         self._buffer = self._input.bin() if self.write_enable else None
 
     def down_tick(self):
         """ Updates the value during the "down" tick, after any "up" reads were performed """
-        if self._buffer:
+        if self._buffer is not None:
             self.content = self._buffer
 
-        # Once a value was read, disable write until its set by the system
+        # Once a value was read, disable write until its set by the system, and clear the buffer
         self._write_enable = False
+        self._buffer = None
 
 
-class GeneralPurposeRegister(DataRegister):
+class GeneralPurposeRegister(BaseDataRegister):
     """ This class represents a register that holds a value with no specific context. Each register has an input
         component, whose value is transferred to the register (if write is enabled). """
 
@@ -144,10 +135,11 @@ class GeneralPurposeRegister(DataRegister):
         return self._content[item]
 
     def clear(self):
-        self._content.value = 0
+        self._buffer.value = 0
 
     def increment(self):
-        self._content.increment()
+        self._buffer = self._content.copy()
+        self._buffer.increment()
 
     def __bool__(self):
         return bool(self._content)
@@ -171,7 +163,7 @@ class GeneralPurposeRegister(DataRegister):
         return self._content.hex()
 
 
-class SliceRegister(DataRegister):
+class SliceRegister(BaseDataRegister):
     """ This class represents a register that accesses a segment of another register. Each register has a parent
         register and an input component. A SliceRegister object allows access to a segment of the parent register, as if
         it were a GeneralPurposeRegister. A segment is defined by a bit index in the parent register, and a segment
@@ -202,7 +194,7 @@ class SliceRegister(DataRegister):
     def set_slice(self, parent, start_bit, slice_size):
         """ Defines the parent register and the slice within it that can be accessed """
 
-        if not isinstance(parent, DataRegister):
+        if not isinstance(parent, BaseDataRegister):
             raise TypeError("only data registers can be accessed by slice registers")
 
         self._parent = parent
