@@ -11,10 +11,9 @@ Description: The registers module defines the classes for the different register
                                (implemented in the 'flags' module)
 """
 
-import abc
-
-from src.framework.components.components import DataComponent
 from src.framework.bit_value import BitValue
+from src.framework.components.components import *
+from src.framework.components.flags import FlagWriteEnable
 
 
 class BaseDataRegister(DataComponent):
@@ -24,15 +23,20 @@ class BaseDataRegister(DataComponent):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, register_id, register_name):
-        super(BaseDataRegister, self).__init__(register_id, register_name)
+        super().__init__(register_id, register_name)
 
-        self._write_enable = False
         self._input = None
         self._buffer = None
 
     @property
-    def write_enable(self):
-        return self._write_enable
+    @abc.abstractmethod
+    def content(self):
+        pass
+
+    @content.setter
+    @abc.abstractmethod
+    def content(self, value):
+        pass
 
     @property
     def input(self):
@@ -92,15 +96,12 @@ class BaseDataRegister(DataComponent):
     def hex(self):
         pass
 
-    def enable_write(self):
-        self._write_enable = True
-
     def up_tick(self):
         """ Updates the buffer during the "up" tick, before the input changes during the "down" tick """
         if self._input is None:
             return
 
-        self._buffer = self._input.bin() if self.write_enable else None
+        self._buffer = self._input.bin()
 
     def down_tick(self):
         """ Updates the value during the "down" tick, after any "up" reads were performed """
@@ -108,16 +109,15 @@ class BaseDataRegister(DataComponent):
             self.content = self._buffer
 
         # Once a value was read, disable write until its set by the system, and clear the buffer
-        self._write_enable = False
         self._buffer = None
 
 
-class GeneralPurposeRegister(BaseDataRegister):
+class BaseGeneralPurposeRegister(BaseDataRegister):
     """ This class represents a register that holds a value with no specific context. Each register has an input
         component, whose value is transferred to the register (if write is enabled). """
 
     def __init__(self, register_id, register_name, size):
-        super(GeneralPurposeRegister, self).__init__(register_id, register_name)
+        super().__init__(register_id, register_name)
         self._content = BitValue(bits=size)
 
     @property
@@ -163,14 +163,54 @@ class GeneralPurposeRegister(BaseDataRegister):
         return self._content.hex()
 
 
-class SliceRegister(BaseDataRegister):
+class SelfEnableGeneralPurposeRegister(BaseGeneralPurposeRegister, SelfContainedWriteEnable):
+    """ This class represents a general-purpose register with a self-contained write enable flag """
+
+    def __init__(self, register_id, register_name, size):
+        BaseGeneralPurposeRegister.__init__(self, register_id, register_name, size)
+        SelfContainedWriteEnable.__init__(self)
+
+    def up_tick(self):
+        """ Checks if write is enabled before performing an "up" tick """
+        if not self.write_enable:
+            self._buffer = None
+            return
+        super().up_tick()
+
+    def down_tick(self):
+        """ Disables writing after the value update """
+        super().down_tick()
+        self.disable_write()
+
+
+class FlagEnableGeneralPurposeRegister(BaseGeneralPurposeRegister, FlagWriteEnable):
+    """ This class represents a general-purpose register with an external write enable flag """
+
+    def __init__(self, register_id, register_name, size):
+        BaseGeneralPurposeRegister.__init__(self, register_id, register_name, size)
+        FlagWriteEnable.__init__(self)
+
+    def up_tick(self):
+        """ Checks if write is enabled before performing an "up" tick """
+        if not self.write_enable:
+            self._buffer = None
+            return
+        super().up_tick()
+
+    def down_tick(self):
+        """ Disables writing after the value update """
+        super().down_tick()
+        self.disable_write()
+
+
+class BaseSliceRegister(BaseDataRegister):
     """ This class represents a register that accesses a segment of another register. Each register has a parent
         register and an input component. A SliceRegister object allows access to a segment of the parent register, as if
         it were a GeneralPurposeRegister. A segment is defined by a bit index in the parent register, and a segment
         size. The ability of a slice register independent from its parent. """
 
     def __init__(self, register_id, register_name):
-        super(SliceRegister, self).__init__(register_id, register_name)
+        super().__init__(register_id, register_name)
         self._parent = None
         self._slice = None
 
@@ -235,3 +275,43 @@ class SliceRegister(BaseDataRegister):
 
     def hex(self):
         return BitValue(self.bin(), len(self)).hex()
+
+
+class SelfEnableSliceRegister(BaseSliceRegister, SelfContainedWriteEnable):
+    """ This class represents a slice register with a self-contained write enable flag """
+
+    def __init__(self, register_id, register_name):
+        BaseSliceRegister.__init__(self, register_id, register_name)
+        SelfContainedWriteEnable.__init__(self)
+
+    def up_tick(self):
+        """ Check if write is enabled before performing an "up" tick """
+        if not self.write_enable:
+            self._buffer = None
+            return
+        super().up_tick()
+
+    def down_tick(self):
+        """ Disables writing after the value update """
+        super().down_tick()
+        self.disable_write()
+
+
+class FlagEnableSliceRegister(BaseSliceRegister, FlagWriteEnable):
+    """ This class represents a slice register with an external write enable flag """
+
+    def __init__(self, register_id, register_name):
+        BaseSliceRegister.__init__(self, register_id, register_name)
+        FlagWriteEnable.__init__(self)
+
+    def up_tick(self):
+        """ Check if write is enabled before performing an "up" tick """
+        if not self.write_enable:
+            self._buffer = None
+            return
+        super().up_tick()
+
+    def down_tick(self):
+        """ Disables writing after the value update """
+        super().down_tick()
+        self.disable_write()

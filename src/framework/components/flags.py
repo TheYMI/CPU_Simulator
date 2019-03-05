@@ -22,7 +22,7 @@ class BaseFlag(DataComponent):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, flag_id, flag_name):
-        super(BaseFlag, self).__init__(flag_id, flag_name)
+        super().__init__(flag_id, flag_name)
         self._content = False
 
     @property
@@ -79,11 +79,40 @@ class BaseFlag(DataComponent):
         return str(self.content)
 
 
+class FlagWriteEnable:
+    """ This class is the base class for components which use an external 'write enable' flag """
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self):
+        self._enable_flag = None
+
+    @property
+    def write_enable(self):
+        return self._enable_flag.content
+
+    def set_enable_flag(self, flag):
+        """ Sets the flag that will be used to enable and disable writing """
+        if flag is None:
+            return
+
+        if not isinstance(flag, BaseFlag):
+            raise TypeError("only flags can be used as 'write enable' flags ")
+
+        self._enable_flag = flag
+
+    def enable_write(self):
+        self._enable_flag.set()
+
+    def disable_write(self):
+        self._enable_flag.clear()
+
+
 class Flag(BaseFlag):
     """ This class represents a simple one-bit flag """
 
     def __init__(self, flag_id, flag_name):
-        super(Flag, self).__init__(flag_id, flag_name)
+        super().__init__(flag_id, flag_name)
         self._buffer = None
 
     def clear(self):
@@ -109,7 +138,7 @@ class InterruptFlag(BaseFlag):
         the flag is set. The flag is cleared once the value is checked. """
 
     def __init__(self, flag_id, flag_name):
-        super(InterruptFlag, self).__init__(flag_id, flag_name)
+        super().__init__(flag_id, flag_name)
 
     def clear(self):
         self._content = False
@@ -135,7 +164,7 @@ class FlagRegister(DataComponent):
         need to be assigned to working flags. Flags can be accessed by index, or by name. """
 
     def __init__(self, register_id, register_name, size):
-        super(FlagRegister, self).__init__(register_id, register_name)
+        super().__init__(register_id, register_name)
         self._content = BitValue(bits=size)
 
     @property

@@ -48,16 +48,11 @@ class DataComponent(Component):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, component_id, component_name):
-        super(DataComponent, self).__init__(component_id, component_name)
+        super().__init__(component_id, component_name)
 
     @property
     @abc.abstractmethod
     def content(self):
-        pass
-
-    @content.setter
-    @abc.abstractmethod
-    def content(self, value):
         pass
 
     @abc.abstractmethod
@@ -82,3 +77,22 @@ class DataComponent(Component):
 
         if not isinstance(component, DataComponent):
             raise TypeError("only data components can be used as inputs for other data components")
+
+
+class SelfContainedWriteEnable:
+    """ This class is the base class for components whose 'write enable' flag is self contained """
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self):
+        self._write_enable = False
+
+    @property
+    def write_enable(self):
+        return self._write_enable
+
+    def enable_write(self):
+        self._write_enable = True
+
+    def disable_write(self):
+        self._write_enable = False
